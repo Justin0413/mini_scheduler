@@ -12,7 +12,9 @@ typedef enum
     TERMINATED
 } TaskState;
 
-typedef struct
+typedef struct TCB TCB;
+
+struct TCB
 {
     int id;
     ucontext_t context;
@@ -20,6 +22,6 @@ typedef struct
     void *stack;
     struct TCB *next;
     int priority; // 未來擴充用
-} TCB;
+};
 
 #endif

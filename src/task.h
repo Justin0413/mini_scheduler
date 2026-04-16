@@ -18,6 +18,7 @@ typedef struct
     ucontext_t context;
     TaskState state;
     void *stack;
+    struct TCB *next;
     int priority; // 未來擴充用
 } TCB;
 

@@ -1,0 +1,24 @@
+// task.h
+#ifndef TASK_H
+#define TASK_H
+
+#include <ucontext.h>
+
+typedef enum
+{
+    READY,
+    RUNNING,
+    WAITING,
+    TERMINATED
+} TaskState;
+
+typedef struct
+{
+    int id;
+    ucontext_t context;
+    TaskState state;
+    void *stack;
+    int priority; // 未來擴充用
+} TCB;
+
+#endif

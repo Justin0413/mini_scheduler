@@ -1,0 +1,10 @@
+# 忽略編譯出的執行檔 (假設你叫 scheduler)
+scheduler
+*.o
+
+# 忽略 perf 分析數據
+perf.data
+perf.data.old
+
+# 忽略 VS Code 設定
+.vscode/

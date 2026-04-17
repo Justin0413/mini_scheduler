@@ -12,7 +12,8 @@ static inline unsigned long long rdtsc(void)
     return ((unsigned long long)hi << 32) | lo;
 }
 
-TCB *head = NULL;          // Ready Queue 的頭
+TCB *head = NULL; // Ready Queue 的頭
+TCB *tail = NULL;
 TCB *cleanup_queue = NULL; // 專門存放已結束、等著被釋放的任務
 TCB *current_task = NULL;
 ucontext_t ctx_main;
@@ -34,18 +35,17 @@ TCB *create_task(int id, void (*func)())
 // 加入任務到 Queue 尾端
 void enqueue(TCB *task)
 {
-    if (!head)
+    task->next = NULL;
+    if (!tail)
     {
-        head = task;
+        head = tail = task;
     }
     else
     {
-        TCB *temp = head;
-        while (temp->next)
-            temp = temp->next;
-        temp->next = task;
+
+        tail->next = task;
+        tail = task;
     }
-    task->next = NULL;
 }
 
 // 從 Queue 頭部取出任務

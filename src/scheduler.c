@@ -125,7 +125,7 @@ void idle_task_function()
 void start_scheduling()
 {
 
-    // 關鍵：儲存 main 的位置，等一下 schedule() 發現沒任務時可以跳回來
+    // 儲存 main 的位置，等一下 schedule() 發現沒任務時可以跳回來
     getcontext(&ctx_main);
 
     // 自動幫使用者建立優先權最低的 Idle Task
@@ -138,7 +138,7 @@ void start_scheduling()
 
 void scheduler_cleanup()
 {
-    // 3. 現在這個函式看得到 global_idle_task 了！
+
     if (global_idle_task)
     {
         if (global_idle_task->stack)
@@ -146,6 +146,6 @@ void scheduler_cleanup()
             free(global_idle_task->stack);
         }
         free(global_idle_task);
-        global_idle_task = NULL; // 養成好習慣，清空指標
+        global_idle_task = NULL; // 清空指標
     }
 }

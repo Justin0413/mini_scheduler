@@ -4,6 +4,7 @@
 #include "scheduler.h"
 
 extern TCB *current_task;
+extern int total_active_tasks;
 
 void task_function(void *arg)
 {
@@ -21,14 +22,13 @@ void task_function(void *arg)
 
 int main()
 {
-
     enqueue(create_task(1, task_function));
     enqueue(create_task(2, task_function));
     // enqueue(create_task(3, task_function));
 
     printf("啟動排程器...\n");
     start_scheduling();
-
+    scheduler_cleanup();
     printf("所有任務結束，回到 Main。\n");
     return 0;
 }

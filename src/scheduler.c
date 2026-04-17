@@ -11,12 +11,14 @@ static inline unsigned long long rdtsc(void)
     __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
     return ((unsigned long long)hi << 32) | lo;
 }
+extern int total_active_tasks;
 
 TCB *head = NULL; // Ready Queue 的頭
 TCB *tail = NULL;
 TCB *cleanup_queue = NULL; // 專門存放已結束、等著被釋放的任務
 TCB *current_task = NULL;
 ucontext_t ctx_main;
+TCB *global_idle_task = NULL;
 
 TCB *create_task(int id, void (*func)())
 {
@@ -98,8 +100,10 @@ void schedule()
 
 void idle_task_function()
 {
-    while (1)
+    int count;
+    while (count < 2)
     {
+
         // 檢查是否有任務需要回收
         while (cleanup_queue != NULL)
         {
@@ -110,18 +114,38 @@ void idle_task_function()
 
             free(to_free->stack); // 釋放stack空間
             free(to_free);        // 釋放 TCB 結構體
+            count++;
         }
         // 讓出 CPU，給其他任務機會
         schedule();
     }
+    setcontext(&ctx_main);
 }
 
 void start_scheduling()
 {
+
+    // 關鍵：儲存 main 的位置，等一下 schedule() 發現沒任務時可以跳回來
+    getcontext(&ctx_main);
+
     // 自動幫使用者建立優先權最低的 Idle Task
-    TCB *idle = create_task(0, (void *)idle_task_function);
-    enqueue(idle);
+    global_idle_task = create_task(0, (void *)idle_task_function);
+    enqueue(global_idle_task);
 
     // 開始第一次排程
     schedule();
+}
+
+void scheduler_cleanup()
+{
+    // 3. 現在這個函式看得到 global_idle_task 了！
+    if (global_idle_task)
+    {
+        if (global_idle_task->stack)
+        {
+            free(global_idle_task->stack);
+        }
+        free(global_idle_task);
+        global_idle_task = NULL; // 養成好習慣，清空指標
+    }
 }

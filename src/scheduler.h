@@ -5,6 +5,7 @@
 #define STACK_SIZE 1024 * 8 // 8KB Stack size
 
 TCB *create_task(int id, void (*func)(void *));
+void scheduler_cleanup();
 void schedule(void);
 void start_scheduling(void);
 void enqueue(TCB *task);

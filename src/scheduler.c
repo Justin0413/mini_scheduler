@@ -1,10 +1,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "task.h"
+#include "scheduler.h"
 
-TCB *head = NULL; // Ready Queue 的頭
+static inline unsigned long long rdtsc(void)
+{
+    unsigned int lo, hi;
+    // 使用 asm 指令讀取
+    // "a" 表示 eax, "d" 表示 edx
+    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((unsigned long long)hi << 32) | lo;
+}
+
+TCB *head = NULL;          // Ready Queue 的頭
+TCB *cleanup_queue = NULL; // 專門存放已結束、等著被釋放的任務
 TCB *current_task = NULL;
 ucontext_t ctx_main;
+
+TCB *create_task(int id, void (*func)())
+{
+    TCB *task = malloc(sizeof(TCB));
+    task->id = id;
+    task->state = READY;
+    task->stack = malloc(STACK_SIZE);
+    getcontext(&task->context);
+    task->context.uc_stack.ss_sp = task->stack;
+    task->context.uc_stack.ss_size = STACK_SIZE;
+    task->context.uc_link = NULL;
+    makecontext(&task->context, func, 1, &task->id);
+    return task;
+}
 
 // 加入任務到 Queue 尾端
 void enqueue(TCB *task)
@@ -35,6 +60,7 @@ TCB *dequeue()
 
 void schedule()
 {
+    unsigned long long start, end;
     TCB *next_task = dequeue();
     if (next_task)
     {
@@ -46,15 +72,56 @@ void schedule()
         {
             enqueue(prev_task);
         }
-
+        if (prev_task && prev_task->state == TERMINATED)
+        {
+            // 將該任務加入待清理清單
+            prev_task->next = cleanup_queue;
+            cleanup_queue = prev_task;
+        }
         // 切換上下文
         if (prev_task)
         {
+            start = rdtsc(); // 記錄開始時間
             swapcontext(&prev_task->context, &next_task->context);
+            end = rdtsc(); // 記錄結束時間
+
+            // 這次切換耗費的 Cycles
+            printf("Context Switch Latency: %llu cycles\n", end - start);
         }
         else
         {
+
             swapcontext(&ctx_main, &next_task->context);
         }
     }
+}
+
+void idle_task_function()
+{
+    while (1)
+    {
+        // 檢查是否有任務需要回收
+        while (cleanup_queue != NULL)
+        {
+            TCB *to_free = cleanup_queue;
+            cleanup_queue = cleanup_queue->next;
+
+            printf("Idle Task: 正在回收 Task %d 的資源...\n", to_free->id);
+
+            free(to_free->stack); // 釋放stack空間
+            free(to_free);        // 釋放 TCB 結構體
+        }
+        // 讓出 CPU，給其他任務機會
+        schedule();
+    }
+}
+
+void start_scheduling()
+{
+    // 自動幫使用者建立優先權最低的 Idle Task
+    TCB *idle = create_task(0, (void *)idle_task_function);
+    enqueue(idle);
+
+    // 開始第一次排程
+    schedule();
 }
